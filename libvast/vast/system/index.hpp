@@ -118,14 +118,10 @@ struct query_state {
   /// Unscheduled partitions.
   std::vector<uuid> partitions;
 
-  // Tells which INDEXER actors we need to query for a given partition.
-  pending_query_map pqm;
-
   template <class Inspector>
   friend auto inspect(Inspector& f, query_state& x) {
     return f(caf::meta::type_name("query_state"), x.id, x.expression,
-             caf::meta::omittable_if_empty(), x.partitions,
-             caf::meta::omittable_if_empty(), x.pqm);
+             caf::meta::omittable_if_empty(), x.partitions);
   }
 };
 
@@ -160,11 +156,10 @@ struct index_state {
 
   caf::actor next_worker();
 
-  /// Prepares a subset of partitions from the lookup_state for evaluation.
-  // TODO: Give this a better name that makes it clear that this only launches
-  // await-handlers and the actual building happens after the function is
-  // completed.
-  void request_query_map(query_state& lookup, uint32_t num_partitions);
+  /// Get the actor handles for up to `num_partitions` PARTITION actors,
+  /// spawning them if needed.
+  std::vector<std::pair<uuid, caf::actor>> collect_query_actors(query_state& lookup,
+                                    uint32_t num_partitions);
 
   /// Spawns one evaluator for each partition.
   /// @returns a query map for passing to INDEX workers over the spawned
